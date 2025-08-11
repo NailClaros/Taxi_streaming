@@ -1,3 +1,5 @@
+test_folder/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -140,6 +142,7 @@ celerybeat.pid
 .venv
 env/
 venv/
+venv3.13.5/
 ENV/
 env.bak/
 venv.bak/
