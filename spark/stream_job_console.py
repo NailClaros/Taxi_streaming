@@ -2,13 +2,11 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType, TimestampType
 from pyspark.sql.functions import from_json, col, to_timestamp, window, avg, count
 
-#Configure Spark and tell it to fetch the Kafka connector from Maven
 spark = SparkSession.builder \
     .appName("taxi-stream-console") \
-    .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.2") \
+    .config("spark.jars.packages", 
+            "org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.2") \
     .getOrCreate()
-
-spark.sparkContext.setLogLevel("WARN")
 
 schema = StructType([
     StructField("trip_id", StringType(), True),
@@ -24,15 +22,15 @@ schema = StructType([
 ])
 
 
-kafka_bootstrap = "localhost:9092"  
-raw = spark.readStream \
+raw_df = (
+    spark.readStream
     .format("kafka") \
-    .option("kafka.bootstrap.servers", kafka_bootstrap) \
+    .option("kafka.bootstrap.servers", "kafka:9092")\
     .option("subscribe", "taxi_trips") \
     .option("startingOffsets", "latest") \
     .load()
-
-json_strings = raw.selectExpr("CAST(value AS STRING) as json_str")
+)
+json_strings = raw_df.selectExpr("CAST(value AS STRING) as json_str")
 
 parsed = json_strings.select(from_json(col("json_str"), schema).alias("data")).select("data.*") \
             .withColumn("pickup_datetime", to_timestamp(col("pickup_datetime")))
@@ -47,7 +45,7 @@ query = agg.writeStream \
     .outputMode("update") \
     .format("console") \
     .option("truncate", False) \
-    .trigger(processingTime="20 seconds") \
+    .trigger(processingTime="10 seconds") \
     .start()
 
 query.awaitTermination()
